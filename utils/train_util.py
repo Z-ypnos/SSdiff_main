@@ -1,13 +1,8 @@
 import copy
-import functools
-import os
-
-# import blobfile as bf
 import os
 import warnings
 
 import numpy as np
-import torch
 import torch as th
 import torch.distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as DDP
@@ -24,76 +19,9 @@ from .fp16_util import (
 )
 from model.nn import update_ema
 from improved_diffusion.resample import LossAwareSampler, UniformSampler
-# from improved_diffusion.metric import AnalysisPanAcc
-# For ImageNet experiments, this was a good default value.
-# We found that the lg_loss_scale quickly climbed to
-# 20-21 within the first ~1K steps of training.
+
 INITIAL_LOG_LOSS_SCALE = 20.0
 
-# def sample_main(model):
-#     from improved_diffusion.script_util import (
-#     NUM_CLASSES,
-#     model_and_diffusion_defaults,
-#     create_model_and_diffusion,
-#     add_dict_to_argparser,
-#     args_to_dict,
-#     )
-#     from pancollection.common.psdata import PansharpeningSession as DataSession
-#     import einops
-#     from configs.option_DPM_pansharpening import parser_args
-
-#     sample_args = parser_args()
-#     sample_args.timestep_respacing = "ddim100"
-
-#     _, sample_diffusion = create_model_and_diffusion(
-#         **args_to_dict(sample_args, model_and_diffusion_defaults().keys())
-#     )
-#     all_images = []
-#     sample_session = DataSession(sample_args)
-#     sample_data, _ = sample_session.get_eval_dataloader(sample_args.dataset['test'], False)    
-#     sample_dl = iter(sample_data)
-#     sample_data4gt = []
-#     for i in range(1):
-#         sample_batch = next(sample_dl)
-#         pan_ori, lms_ori, ms_ori, gt = sample_batch['pan'], sample_batch['lms'], sample_batch['ms'], sample_batch['gt']
-#         gt =  einops.rearrange(gt, 'b k1 k2 c -> b c k1 k2', k1=256, k2=256)
-#         sample_data4gt.append(gt[0])
-
-#         for j in range (1):
-            
-#             pan, lms, ms = map(lambda x: x.to(dist_util.dev()), (pan_ori, lms_ori, ms_ori))
-#             # model_kwargs.update(lms=lms, pan=pan, ms=ms)
-#             sample_fn = (
-#                 sample_diffusion.p_sample_loop if not sample_args.use_ddim else sample_diffusion.ddim_sample_loop
-#             )
-
-#             kwargs_data = {"lms": lms, "pan": pan, "ms": ms}
-        
-#             kwargs_sample = sample_fn(
-#                         model,
-#                         shape=(sample_args.crop_batch_size, 8, sample_args.image_size, sample_args.image_size),
-#                         model_kwargs=kwargs_data,
-#                         clip_denoised=sample_args.clip_denoised,
-#                         progress=False)
-            
-#             # model.forward_chop -> val_step = forward + p_mean_variance -> forward_chop
-            
-#             kwargs_sample = kwargs_sample.contiguous()  # sample[:, [4,2,0]]
-#             kwargs_sample = (kwargs_sample).clamp(0, 1)
-#             gathered_samples = [kwargs_sample]
-#             all_images.extend([sample.cpu().numpy() for sample in gathered_samples])
-
-#             logger.log(f"created {len(all_images) * sample_args.crop_batch_size} samples")
-
-#     # print(len(all_images))
-#     sample_arr = np.concatenate(all_images, axis=0)
-#     sample_arr = sample_arr[: sample_args.num_samples]
-
-#     d = dict(  # [b, h, w, c], wv3 [0, 2047]
-#             gt=[sample.cpu().numpy() for sample in sample_data4gt],
-#             sr=[sample for sample in sample_arr],
-#         )
-#     return d
 
 class TrainLoop:
     def __init__(
@@ -140,7 +68,6 @@ class TrainLoop:
         self.step = 0
         self.resume_step = 0
         self.global_batch = self.batch_size
-        # self.global_batch = self.batch_size * dist.get_world_size()
         self.loca=datetime.datetime.now().strftime('%m-%d-%H-%M')
         
         self.model_params = list(self.model.parameters())
@@ -180,8 +107,6 @@ class TrainLoop:
                         resume_checkpoint, map_location=dist_util.dev()
                     )
                 )
-
-        # dist_util.sync_params(self.model.parameters())
 
     def _load_ema_parameters(self, rate):
         ema_params = copy.deepcopy(self.master_params)
