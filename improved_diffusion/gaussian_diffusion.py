@@ -619,19 +619,6 @@ class GaussianDiffusion:
         Same usage as p_sample_loop().
         """
         final = None
-        # for sample in self.ddim_sample_loop_progressive(
-        #     model,
-        #     shape,
-        #     noise=noise,
-        #     clip_denoised=clip_denoised,
-        #     denoised_fn=denoised_fn,
-        #     model_kwargs=model_kwargs,
-        #     device=device,
-        #     progress=progress,
-        #     eta=eta,
-        # ):
-        #     final = sample
-        # return final["sample"]
         
         with th.no_grad():
             final = model.forward_chop(
@@ -639,14 +626,11 @@ class GaussianDiffusion:
                 shape=shape,
                 noise=noise,
                 clip_denoised=clip_denoised,
-                # denoised_fn=denoised_fn,
-                # model_kwargs=model_kwargs,
                 num_timesteps=self.num_timesteps,
                 sample_fn = self.ddim_sample_loop_progressive,
                 device=device,
                 progress=progress,
                 eta=eta)[0]
-            # delattr(model, 'indices')
 
         return final#['sample']
             
@@ -658,7 +642,6 @@ class GaussianDiffusion:
         model_output,
         t,
         lms,
-        # shape,
         noise=None,
         clip_denoised=True,
         denoised_fn=None,
@@ -673,72 +656,12 @@ class GaussianDiffusion:
 
         Same usage as p_sample_loop_progressive().
         """
-        # if device is None:
-        #     device = next(model.parameters()).device
-        # assert isinstance(shape, (tuple, list))
-        # if noise is not None:
-        #     img = noise
-        # else:
-        #     img = th.randn(*shape, device=device)
-        
-        
-        # indices = indices[:num_batch, ...]
-        # img = img[:num_batch, ...]
-        
-        # if progress:
-        #     # Lazy import so that we don't depend on tqdm.
-        #     from tqdm.auto import tqdm
 
-        #     indices = tqdm(indices)
-
-        # for i in indices:
-        #     t = th.tensor([i] * shape[0], device=device)
-        #     with th.no_grad():
-        #         out = model.forward_chop(
-        #                  list(model_kwargs.values()),
-        #                  x_t = img,
-        #                  t = self._scale_timesteps(t),
-        #                  sample_fn = self.ddim_sample,  
-        #                  clip_denoised=clip_denoised)[0]
-        
-        
-        # for i in indices:
-        #     t = th.tensor([i] * shape[0], device=device)
-        #     with th.no_grad():
-        #         out = self.ddim_sample(model_output, img, t,
-        #                                clip_denoised=clip_denoised,
-        #                                eta=eta)
-        
-            # t = [self._scale_timesteps(
-            # th.tensor([i] * shape[0], device=device)) for i in indices]
-            # with th.no_grad():
-            #     out = model.forward_chop(
-            #              list(model_kwargs.values()),
-            #              x_t = img,
-            #              t = self._scale_timesteps(t),
-            #              sample_fn = self.ddim_sample,  
-            #              clip_denoised=clip_denoised)[0]
         out = self.ddim_sample(model_output, noise, t, lms,
                                        clip_denoised=clip_denoised,
                                        eta=eta)
         return out
-                # out = self.ddim_sample(
-                #     model,
-                #     img,
-                #     t,
-                #     lms=lms,
-                #     clip_denoised=clip_denoised,
-                #     denoised_fn=denoised_fn,
-                #     model_kwargs=model_kwargs,
-                #     eta=eta,
-                # )
-                # yield out
-                # img = out["sample"]
-                
-                
-                
-                
-                
+                    
 
     def _vb_terms_bpd(
         self, model, x_start, x_t, t, clip_denoised=True, model_kwargs=None
@@ -802,13 +725,6 @@ class GaussianDiffusion:
             print(model_kwargs.keys(), model_kwargs.keys())
             raise KeyError
 
-        # """ test """
-        # pan = model_kwargs["pan"]
-        # lms = model_kwargs["lms"]
-        # pan_concat = torch.cat([pan, pan, pan, pan, pan, pan, pan, pan], axis = 1)
-        # x_t, model_kwargs["pan_t"], model_kwargs["lms_t"] = self.q_sample(x_start_res, pan_concat, lms, t, noise=noise)
-        # """ test """
-
         x_t = self.q_sample_xt(x_start_res, t, noise=noise) # 1, 8, 64, 64 gt->xt
 
         terms = {}
@@ -857,12 +773,7 @@ class GaussianDiffusion:
             
             criterion = torch.nn.L1Loss(size_average=True).to("cuda")
             terms["loss"] = criterion(model_output, target)
-            # terms["mse"] = mean_flat((target - model_output) ** 2)
-            
-            # if "vb" in terms:
-            #     terms["loss"] = terms["mse"] + terms["vb"]
-            # else:
-            #     terms["loss"] = terms["mse"]
+
         else:
             raise NotImplementedError(self.loss_type)
         
