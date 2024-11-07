@@ -18,6 +18,7 @@
 </p>
 
 News:
+- 2024/11/7：**Code RELEASED!**:fire: 
 
 - 2024/10/18: **Code will be released soon!**:fire: 
 
