@@ -1,7 +1,3 @@
-"""
-Generate a large batch of image samples from a model and save them as a large
-numpy array. This can be used to produce samples for FID evaluation.
-"""
 from functools import partial
 import os
 import time
@@ -146,84 +142,6 @@ def main(
     return out_path
 
 
-def loss_trend():
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    from torch.utils.tensorboard import SummaryWriter
-    data = pd.read_csv(r'DPM/iddpm/logs/train_log/log-2023-06-22-22-55-52-808391/progress.csv',sep=',',header=0)
-    train_loss = list(data['loss'])
-    step = list(data['step'])
-    print(len(train_loss), len(step))
-
-    log_dir = "/Data2/YuZhong/AEM/DPM/iddpm/logs/train_log/log-2023-06-22-22-55-52-808391"
-    train_writer = SummaryWriter(log_dir=log_dir)
-    for i in range(len(train_loss)):
-        train_writer.add_scalar('Loss', train_loss[i], step[i])
-
-def showmat(out_path=None):
-    from matplotlib import pyplot as plt
-    import scipy.io
-    import cv2
-    # matpath = "/Data2/YuZhong/AEM/DPM/iddpm/logs/usable_res/samples_reduced_20x256x256x8_624.mat"
-    if out_path != None:
-        matpath = out_path
-    gt = scipy.io.loadmat(matpath)['gt']
-    sr = scipy.io.loadmat(matpath)['sr']
-    sr =  einops.rearrange(sr, 'b c k1 k2 -> b k1 k2 c', k1=256, k2=256)
-    gt =  einops.rearrange(gt, 'b c k1 k2 -> b k1 k2 c', k1=256, k2=256)
-    res = cv2.absdiff(gt,sr)
-    for k in range(len(gt)):
-        filepath = f'DPM/iddpm/logs/result/reduced_' + str(k) + '/'
-        if not os.path.exists(filepath): 
-            os.makedirs(filepath)
-        plt.imshow(gt[k][:,:,[4,2,0]]/2047)
-        plt.savefig(filepath + 'gt_' + str(k) + '_rgb_.png')
-
-        plt.imshow(sr[k][:,:,[4,2,0]]/2047)
-        plt.savefig(filepath + 'pred_' + str(k) +'_rgb_.png')
-
-        plt.imshow(res[k][:,:,[4,2,0]]/2047)
-        plt.savefig(filepath + 'res_' + str(k) +'_rgb_.png')
-
-
-def showimg():
-    args = parser_args()
-
-    session = DataSession(args)
-    data, _ = session.get_eval_dataloader(args.dataset['test'], False)    
-    dl = iter(data)
-    # image_num = len(data)
-    image_num = 20
-    print("image_num:", image_num)
-
-    for i in range(image_num):
-        plt.axis('off')  # 去掉坐标轴
-        # plt.imshow(sample[0][:,:,(4, 2, 0)].cpu().numpy())
-        plt.tight_layout()
-        # model_kwargs = {}
-        batch = next(dl)
-        pan_ori, lms_ori, ms_ori, gt = batch['pan'], batch['lms'], batch['ms'], batch['gt']
-        # gt =  einops.rearrange(gt, 'b c k1 k2 -> b k1 k2 c', k1=256, k2=256)
-        pan_ori =  einops.rearrange(pan_ori, 'b c k1 k2 -> b k1 k2 c', k1=256, k2=256)
-        lms_ori =  einops.rearrange(lms_ori, 'b c k1 k2 -> b k1 k2 c', k1=256, k2=256)
-        ms_ori =  einops.rearrange(ms_ori, 'b c k1 k2 -> b k1 k2 c', k1=64, k2=64)
-        filepath = f'DPM/iddpm/logs/result/pan_lms_' + str(i) + '/'
-        if not os.path.exists(filepath): 
-            os.makedirs(filepath)
-        plt.imshow(gt[0][:,:,[4,2,0]])
-        plt.savefig(filepath + 'gt_' + str(i) + '_rgb_.png')
-
-        plt.imshow(pan_ori[0][:,:,:], cmap ='gray')
-        plt.imsave(filepath + 'pan_' + str(i) +'_rgb_.png', pan_ori[0][:,:,:],  cmap ='gray')
-
-        plt.imshow(ms_ori[0][:,:,[4,2,0]])
-        plt.savefig(filepath + 'ms_' + str(i) +'_rgb_.png')
-        
-        plt.imshow(lms_ori[0][:,:,[4,2,0]])
-        plt.savefig(filepath + 'lms_' + str(i) +'_rgb_.png')
-        
 if __name__ == "__main__":
-    # loss_trend()
     out_path = main()
-    # showmat(out_path)
-    # showimg()
+
